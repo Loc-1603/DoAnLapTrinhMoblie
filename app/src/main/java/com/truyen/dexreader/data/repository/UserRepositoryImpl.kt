@@ -1,0 +1,63 @@
+package com.truyen.dexreader.data.repository
+
+import com.truyen.dexreader.data.mapper.toDomain
+import com.truyen.dexreader.data.mapper.toUserProfileDto
+import com.truyen.dexreader.data.network.firebase.auth.FirebaseAuthSource
+import com.truyen.dexreader.data.network.firebase.firestore.FirebaseFirestoreSource
+import com.truyen.dexreader.domain.model.User
+import com.truyen.dexreader.domain.repository.UserRepository
+import com.truyen.dexreader.utils.runSuspendCatching
+import com.truyen.dexreader.utils.toResultFlow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import javax.inject.Inject
+
+class UserRepositoryImpl @Inject constructor(
+  private val firebaseAuthSource: FirebaseAuthSource,
+  private val firebaseFirestoreSource: FirebaseFirestoreSource
+) : UserRepository {
+  override suspend fun registerUser(email: String, password: String): Result<User> =
+    runSuspendCatching(Dispatchers.IO) {
+      firebaseAuthSource.registerUser(email, password)?.toDomain()
+        ?: throw IllegalStateException("User registration failed")
+    }
+
+  override suspend fun loginUser(email: String, password: String): Result<Unit> =
+    runSuspendCatching(Dispatchers.IO) {
+      firebaseAuthSource.loginUser(email, password)
+    }
+
+  override suspend fun logoutUser(): Result<Unit> =
+    runSuspendCatching(Dispatchers.IO) {
+      firebaseAuthSource.logoutUser()
+    }
+
+  override suspend fun sendResetUserPassword(email: String): Result<Unit> =
+    runSuspendCatching(Dispatchers.IO) {
+      firebaseAuthSource.sendResetUserPassword(email)
+    }
+
+  override fun observeCurrentUser(): Flow<Result<User?>> =
+    firebaseAuthSource
+      .observeCurrentUser()
+      .map { it?.toDomain() }
+      .flowOn(Dispatchers.IO)
+      .distinctUntilChanged()
+      .toResultFlow()
+
+  override suspend fun addAndUpdateUserProfile(user: User): Result<Unit> =
+    runSuspendCatching(Dispatchers.IO) {
+      firebaseFirestoreSource.addAndUpdateUserProfile(userProfile = user.toUserProfileDto())
+    }
+
+  override fun observeUserProfile(userId: String): Flow<Result<User?>> =
+    firebaseFirestoreSource
+      .observeUserProfile(userId)
+      .map { it?.toDomain() }
+      .flowOn(Dispatchers.IO)
+      .distinctUntilChanged()
+      .toResultFlow()
+}

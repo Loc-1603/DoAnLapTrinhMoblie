@@ -1,0 +1,18 @@
+package com.truyen.dexreader.domain.model
+
+import androidx.compose.runtime.Immutable
+
+@Immutable
+data class ReadingHistory(
+  val id: String,
+  val mangaId: String,
+  val mangaTitle: String,
+  val mangaCoverUrl: String,
+  val chapterId: String,
+  val chapterTitle: String,
+  val chapterNumber: String,
+  val chapterVolume: String,
+  val lastReadPage: Int,
+  val totalChapterPages: Int,
+  val lastReadAt: String?,
+)
